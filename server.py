@@ -14,6 +14,22 @@ scriptpath = os.path.dirname(os.path.realpath(__file__))
 def endprogram(exitcode):
      exit(exitcode)
 
+if not os.path.isfile(f'{scriptpath}/hosts.ini'):
+     print("No hosts file found!\nGenerating one for you in script dir...")
+     with open(f'{scriptpath}/hosts.ini', "x") as f:
+            f.write(
+'''[configuration]
+defaultHost = examplehost
+
+#=========Define hosts here=========#
+[examplehost]
+    ip = 192.142.0.102
+    username = root
+    password = helloWorld22'''
+    )
+            print("\nPlease configure the file to use the program")
+            exit(0)
+
 try:
     config = configparser.ConfigParser()
     config.read(f'{scriptpath}/hosts.ini')
