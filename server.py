@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys, os
+cwd = os.getcwd()
 import os.path
 import configparser
 import pexpect
@@ -8,12 +9,14 @@ import fabric
 import time
 home = str(Path.home())
 rows, columns = os.popen('stty size', 'r').read().split()
-os.environ['LINES'] = str(rows)
-os.environ['COLUMNS'] = str(columns)
+scriptpath = os.path.dirname(os.path.realpath(__file__))
+
+def endprogram(exitcode):
+     exit(exitcode)
 
 try:
     config = configparser.ConfigParser()
-    config.read('hosts.ini')
+    config.read(f'{scriptpath}/hosts.ini')
 
     defaultHost = config.get('configuration', 'defaultHost')
 
@@ -24,27 +27,27 @@ except:
     print('''
     \033[0;31mThere was an error with the config.\033[0m
     ''')
-    exit(1)
+    endprogram(1)
 
 def noarg(): 
     print('''
     \033[0;31mNo known argument provided!
     \033[0mAvaible args:
-                        login, l --> Connects to the server via ssh
+                    login, l --> Connects to the server via ssh
 
-                             run --> Runs a command on the server
-                                     Syntax: server run (--in-terminal, -t true/false (default = true)) [command]
+                         run --> Runs a command on the server
+                                 Syntax: server run (--in-terminal, -t true/false (default = true)) [command]
 
-                     transfer, t --> Transfers a file to the server
-                                     Syntax: server transfer (--host, -h hostname) [file] [destination]
+                 transfer, t --> Transfers a file to the server
+                                 Syntax: server transfer (--host, -h hostname) [file] [destination]
 
-                        add_host --> Adds a new host to the configuration file
+                    add_host --> Adds a new host to the configuration file
 
-                        del_host --> Removes a host from the configuration file
+                    del_host --> Removes a host from the configuration file
 
-                    default_host --> Sets a host to be the default
+                default_host --> Sets a host to be the default
     ''')
-    exit(1)
+    endprogram(1)
 arguments = sys.argv[1:]
 
 if arguments == []: noarg()
@@ -65,7 +68,7 @@ if arguments[0] == "login" or arguments[0] == "l":
     ssh_session.interact()
 
     # End of Program
-    exit(0)
+    endprogram(0)
 elif arguments[0] == "transfer" or arguments[0] == "t":
     where = arguments[2].replace(home, "~")
 
@@ -73,7 +76,7 @@ elif arguments[0] == "transfer" or arguments[0] == "t":
             print('''
     \033[0;31mThat file does not exist!\033[0m
     ''')
-            exit(1)
+            endprogram(1)
             
 
     print(f'\nFile to transfer: {arguments[1]}\nServer Location: {where}\n')
@@ -90,7 +93,7 @@ elif arguments[0] == "transfer" or arguments[0] == "t":
     ssh_session.interact()
 
     # End of Program
-    exit(0)
+    endprogram(0)
 elif arguments[0] == "run":
     terminal = True
     if arguments[1] == "--in-terminal" or arguments[1] == "-t":
@@ -104,15 +107,22 @@ elif arguments[0] == "run":
     else:
           cmdplacement = 1
     
+    command = " ".join(arguments[cmdplacement:])
+    
     c = fabric.Connection(ssh_host, port=22, user=ssh_username, connect_kwargs={'password': ssh_password})
     with c:
         try:
-            c.run(arguments[cmdplacement])
+            if terminal == False:
+                 c.run(f'/bin/bash -c "(nohup {command} >& /dev/null < /dev/null &)"')
+                 print(f' ⚙️  Running "{command}" in the background')
+            else:
+                c.run(command)
         except:
             print(f'''
-    \033[0;31mException while running "{arguments[cmdplacement]}" on server!\033[0m
+    \033[0;31mException while running "{command}" on server!\033[0m
     ''')
-            exit(1)             
+            endprogram(1)
+    endprogram(0)
 
      
     
